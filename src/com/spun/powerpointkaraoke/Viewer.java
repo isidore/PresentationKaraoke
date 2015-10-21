@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -50,17 +51,27 @@ public class Viewer extends JPanel implements KeyListener
   }
   public static void main(String[] args)
   {
+    String commandLine = 0 < args.length ? args[0] : null;
+    String directory = getDirectoryForImages(commandLine);
+    launch(directory);
+  }
+  private static String getDirectoryForImages(String commandLine)
+  {
     String directory = ".";
-    if (1 <= args.length)
+    if (commandLine != null)
     {
-      directory = args[0];
+      directory = commandLine;
     }
     else
     {
-      boolean forKids = false;
-      directory = forKids ? "/Users/llewellyn/Desktop/kidskaraoke/" : "/Users/llewellyn/Desktop/Presentation/";
+      //      boolean forKids = false;
+      //      directory = forKids ? "/Users/llewellyn/Desktop/kidskaraoke/" : "/Users/llewellyn/Desktop/Presentation/";
+      JFileChooser j = new JFileChooser();
+      j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      Integer opt = j.showOpenDialog(null);
+      directory = j.getSelectedFile().getAbsolutePath();
     }
-    launch(directory);
+    return directory;
   }
   private static void launch(String directory)
   {

@@ -1,0 +1,38 @@
+<project name="Presentation Karaoke" basedir="." default="Publish    Presentation Karaoke">
+	<target name="compile" depends="cleanUp">
+		<mkdir dir="${build}" />
+		<delete dir="${build}/com/spun" />
+		<echo>${targetJavaClass}</echo>
+		<javac srcdir="${src}" destdir="${build}" debug="true" includes="${targetJavaClass}" target="1.6" source="1.6" listfiles="true">
+			<exclude name="**/tests/**" if="excludeTests" />
+			<classpath>
+				<fileset dir="${jars}">
+					<include name="**/*.jar" />
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+	<target name="cleanUp">
+		<delete dir="${build}" />
+	</target>
+
+	<target name="Publish    Presentation Karaoke">
+		<property file="properties/presentation_karaoke.properties" />
+		<antcall target="buildExecutableJarFile" />
+	</target>
+	<target name="buildExecutableJarFile" depends="compile">
+		<!-- comment out the resource copy & the zipfileset to build launcher. Also fix this later-->
+		<copy todir="${build}">
+			<fileset dir="${src}" includes="org/**" />
+		</copy>
+		<delete file="${jar}" failonerror="false" />
+		<jar destfile="${jarFile}" update="false">
+			<fileset dir="${build}" includes="**" />
+			<zipfileset src="${jars}/ApprovalTests.jar" includes="**/*.java **/*.class" />
+			<manifest>
+				<attribute name="Main-Class" value="${executableMainClass}" />
+			</manifest>
+		</jar>
+	</target>
+
+</project>
