@@ -1,7 +1,11 @@
 package com.spun.powerpointkaraoke;
 
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
@@ -18,21 +22,24 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import com.spun.util.Colors;
 import com.spun.util.FrameCloser;
 import com.spun.util.NumberUtils;
 import com.spun.util.ObjectUtils;
 import com.spun.util.WindowUtils;
 import com.spun.util.io.FileUtils;
 import com.spun.util.io.SimpleFileFilter;
+import com.spun.util.logger.SimpleLogger;
 
 public class Viewer extends JPanel implements KeyListener
 {
-  private File[]        slides;
-  private BufferedImage slide;
-  int                   index           = 0;
-  private int           numberOfSlides  = 5;
-  private boolean       currentlyPaused = false;
-  private String        directory;
+  private static final int NEW_SPEAKER    = -1;
+  private File[]           slides;
+  private BufferedImage    slide;
+  int                      totalIndex     = 0;
+  int                      currentIndex   = NEW_SPEAKER;
+  private int              numberOfSlides = 5;
+  private String           directory;
   public Viewer(String directory)
   {
     this.directory = directory;
@@ -52,7 +59,9 @@ public class Viewer extends JPanel implements KeyListener
   public static void main(String[] args)
   {
     String commandLine = 0 < args.length ? args[0] : null;
-    String directory = getDirectoryForImages(commandLine);
+    String directory = "/Users/llewellyn/Desktop/Presentation Karaoke";
+    directory = getDirectoryForImages(commandLine);
+    SimpleLogger.variable("Directory", directory);
     launch(directory);
   }
   private static String getDirectoryForImages(String commandLine)
@@ -64,8 +73,6 @@ public class Viewer extends JPanel implements KeyListener
     }
     else
     {
-      //      boolean forKids = false;
-      //      directory = forKids ? "/Users/llewellyn/Desktop/kidskaraoke/" : "/Users/llewellyn/Desktop/Presentation/";
       JFileChooser j = new JFileChooser();
       j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
       Integer opt = j.showOpenDialog(null);
@@ -91,42 +98,85 @@ public class Viewer extends JPanel implements KeyListener
   }
   private void advance()
   {
-    if (slides.length <= index)
+    if (slides.length <= totalIndex)
     {
       this.loadPictures(slides);
     }
+    currentIndex++;
+    boolean advanced = showStartScreen() || showEndScreen() || showNextSlide();
+  }
+  private void goBack()
+  {
+    boolean advanced = backFromStartScreen() || backFromNextSlide() || backFromEndScreen();
+  }
+  private boolean backFromEndScreen()
+  {
+    if (numberOfSlides < currentIndex)
+    {
+      currentIndex--;
+      totalIndex -= 2;
+      showNextSlide();
+    }
+    return false;
+  }
+  private boolean backFromNextSlide()
+  {
+    if (0 < currentIndex && currentIndex <= numberOfSlides)
+    {
+      currentIndex -= 2;
+      totalIndex = Integer.max(0, totalIndex - 2);
+      advance();
+      return true;
+    }
+    return false;
+  }
+  private boolean backFromStartScreen()
+  {
+    // doNothing
+    return (currentIndex == 0);
+  }
+  private boolean showNextSlide()
+  {
     try
     {
-      if (isPaused())
-      {
-        pause();
-      }
-      else
-      {
-        slide = ImageIO.read(slides[index++]);
-      }
+      slide = ImageIO.read(slides[totalIndex++]);
     }
     catch (IOException e)
     {
       throw ObjectUtils.throwAsError(e);
     }
+    return true;
   }
-  private void pause()
+  private boolean showStartScreen()
   {
-    slide = new BufferedImage(10, 10, BufferedImage.TYPE_INT_BGR);
+    if (currentIndex != 0) { return false; }
+    slide = createBlankSlide(Color.white, "Presenting...");
+    return true;
   }
-  private boolean isPaused()
+  private BufferedImage createBlankSlide(Color color, String text)
   {
-    if (index % numberOfSlides == 0 && index != 0)
-    {
-      currentlyPaused = !currentlyPaused;
-    }
-    return currentlyPaused;
+    Dimension d = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+    BufferedImage img = new BufferedImage(d.width, d.height, BufferedImage.TYPE_INT_BGR);
+    Graphics2D g = img.createGraphics();
+    Font f = new Font("Times New Roman", Font.BOLD, 100);
+    g.setFont(f);
+    g.setColor(color);
+    drawCenteredString(g, text, d.width / 2, d.height / 2);
+    g.dispose();
+    return img;
+  }
+  private boolean showEndScreen()
+  {
+    if (currentIndex <= numberOfSlides) { return false; }
+    slide = createBlankSlide(Colors.Reds.IndianRed, "The End.");
+    currentIndex = NEW_SPEAKER;
+    return true;
   }
   private void loadPictures(File... slides)
   {
     this.slides = NumberUtils.getShuffled(slides, slides.length);
-    index = 0;
+    totalIndex = 0;
+    currentIndex = NEW_SPEAKER;
     advance();
   }
   @Override
@@ -141,12 +191,29 @@ public class Viewer extends JPanel implements KeyListener
   public void keyReleased(KeyEvent e)
   {
     int keyCode = e.getKeyCode();
+    //System.out.println("code: " + keyCode);
     if (keyCode == 27) //esc
     {
       System.exit(0);
     }
-    //    System.out.println("code: " + keyCode);
-    advance();
+    else if (keyCode == 37)
+    {
+      goBack();
+    }
+    else
+    {
+      advance();
+    }
     repaint();
+  }
+  public static void drawCenteredString(Graphics g, String text, int x, int y)
+  {
+    FontMetrics metrics = g.getFontMetrics();
+    int width = metrics.stringWidth(text);
+    x -= (width / 2);
+    int height = metrics.getHeight();
+    y -= (height / 2);
+    y += metrics.getAscent();
+    g.drawString(text, x, y);
   }
 }
