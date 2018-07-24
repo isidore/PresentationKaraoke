@@ -22,10 +22,11 @@ import java.util.prefs.Preferences;
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import com.spun.util.Colors;
-import com.spun.util.FrameCloser;
 import com.spun.util.NumberUtils;
 import com.spun.util.ObjectUtils;
 import com.spun.util.WindowUtils;
@@ -44,48 +45,58 @@ public class Viewer extends JPanel implements KeyListener
   private String           directory;
   public Viewer(String directory)
   {
-    this.directory = directory;
-    loadPictures(readAllFiles());
+    setSlideDirectory(directory);
     addKeyListener(this);
     Dimension d = Toolkit.getDefaultToolkit().getScreenSize();
     this.setPreferredSize(d);
     setFocusable(true);
   }
+  private void setSlideDirectory(String directory)
+  {
+    this.directory = directory;
+    loadPictures(readAllFiles());
+  }
   @Override
   public void paint(Graphics g)
   {
-    super.paint(g);
-    Image scaled = slide.getScaledInstance(this.getWidth(), this.getHeight(), Image.SCALE_DEFAULT);
-    g.drawImage(scaled, 0, 0, this);
+    try
+    {
+      super.paint(g);
+      Image scaled = slide.getScaledInstance(this.getWidth(), this.getHeight(), Image.SCALE_DEFAULT);
+      g.drawImage(scaled, 0, 0, this);
+    }
+    catch (Throwable t)
+    {
+      // do nothing
+    }
   }
   public static void main(String[] args)
   {
-    String directory = getDirectoryForImages();
-    SimpleLogger.variable("Directory", directory);
-    launch(directory);
+    launch(false);
   }
-  private static String getDirectoryForImages()
+  private static String getDirectoryForImages(boolean force)
   {
     Preferences prefs = Preferences.userNodeForPackage(Viewer.class);
     String directory = prefs.get("directory", null);
-    if (directory != null && new File(directory).isDirectory())
+    if (!force && directory != null && new File(directory).isDirectory())
     {
       return directory;
     }
     else
     {
+      File starting = new File(directory == null ? "." : directory);
       JFileChooser j = new JFileChooser();
       j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-      j.setCurrentDirectory(new File("."));
+      j.setCurrentDirectory(starting);
       Integer opt = j.showOpenDialog(null);
       directory = j.getSelectedFile().getAbsolutePath();
       prefs.put("directory", directory);
       return directory;
     }
   }
-  private static void launch(String directory)
+  private static void launch(boolean askForDirectory)
   {
-    Viewer panel = new Viewer(directory);
+    Viewer panel = new Viewer(getDirectoryForImages(askForDirectory));
     JFrame frame = new JFrame("Presentation Karaoke");
     frame.getContentPane().add(panel);
     frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -94,7 +105,7 @@ public class Viewer extends JPanel implements KeyListener
         new Point(0, 0), "null"));
     GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
     gd.setFullScreenWindow(frame);
-    WindowUtils.testFrame(frame, new WindowAdapter[]{new FrameCloser()});
+    WindowUtils.testFrame(frame, new WindowAdapter[]{});
   }
   private File[] readAllFiles()
   {
@@ -199,7 +210,7 @@ public class Viewer extends JPanel implements KeyListener
     //System.out.println("code: " + keyCode);
     if (keyCode == 27) //esc
     {
-      System.exit(0);
+      showExitScreen();
     }
     else if (keyCode == 37)
     {
@@ -210,6 +221,27 @@ public class Viewer extends JPanel implements KeyListener
       advance();
     }
     repaint();
+  }
+  private void showExitScreen()
+  {
+    String[] answers = new String[]{"Exit", "Change Slide Directory", "Cancel"};
+    final int CANCEL = 2;
+    final int DIRECTORY = 1;
+    int response = JOptionPane.showOptionDialog(this, "Would you like to Exit?", "Exit",
+        JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, answers, answers[0]);
+    SimpleLogger.variable("response", response);
+    switch (response)
+    {
+      case CANCEL :
+        // do nothing
+        break;
+      case DIRECTORY :
+        SwingUtilities.getWindowAncestor(this).dispose();
+        launch(true);
+        break;
+      default :
+        System.exit(0);
+    }
   }
   public static void drawCenteredString(Graphics g, String text, int x, int y)
   {
