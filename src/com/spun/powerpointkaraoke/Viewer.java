@@ -9,6 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -16,6 +17,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
@@ -58,27 +60,28 @@ public class Viewer extends JPanel implements KeyListener
   }
   public static void main(String[] args)
   {
-    String commandLine = 0 < args.length ? args[0] : null;
-    String directory = "/Users/llewellyn/Desktop/Presentation Karaoke";
-    directory = getDirectoryForImages(commandLine);
+    String directory = getDirectoryForImages();
     SimpleLogger.variable("Directory", directory);
     launch(directory);
   }
-  private static String getDirectoryForImages(String commandLine)
+  private static String getDirectoryForImages()
   {
-    String directory = ".";
-    if (commandLine != null)
+    Preferences prefs = Preferences.userNodeForPackage(Viewer.class);
+    String directory = prefs.get("directory", null);
+    if (directory != null && new File(directory).isDirectory())
     {
-      directory = commandLine;
+      return directory;
     }
     else
     {
       JFileChooser j = new JFileChooser();
       j.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      j.setCurrentDirectory(new File("."));
       Integer opt = j.showOpenDialog(null);
       directory = j.getSelectedFile().getAbsolutePath();
+      prefs.put("directory", directory);
+      return directory;
     }
-    return directory;
   }
   private static void launch(String directory)
   {
@@ -87,6 +90,8 @@ public class Viewer extends JPanel implements KeyListener
     frame.getContentPane().add(panel);
     frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
     frame.setVisible(true);
+    frame.setCursor(frame.getToolkit().createCustomCursor(new BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB),
+        new Point(0, 0), "null"));
     GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
     gd.setFullScreenWindow(frame);
     WindowUtils.testFrame(frame, new WindowAdapter[]{new FrameCloser()});
