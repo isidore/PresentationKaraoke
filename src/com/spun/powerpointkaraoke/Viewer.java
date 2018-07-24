@@ -32,7 +32,6 @@ import com.spun.util.ObjectUtils;
 import com.spun.util.WindowUtils;
 import com.spun.util.io.FileUtils;
 import com.spun.util.io.SimpleFileFilter;
-import com.spun.util.logger.SimpleLogger;
 
 public class Viewer extends JPanel implements KeyListener
 {
@@ -208,17 +207,16 @@ public class Viewer extends JPanel implements KeyListener
   {
     int keyCode = e.getKeyCode();
     //System.out.println("code: " + keyCode);
-    if (keyCode == 27) //esc
+    switch (keyCode)
     {
-      showExitScreen();
-    }
-    else if (keyCode == 37)
-    {
-      goBack();
-    }
-    else
-    {
-      advance();
+      case KeyEvent.VK_ESCAPE :
+        showExitScreen();
+        break;
+      case KeyEvent.VK_LEFT :
+        goBack();
+        break;
+      default :
+        advance();
     }
     repaint();
   }
@@ -227,16 +225,15 @@ public class Viewer extends JPanel implements KeyListener
     String[] answers = new String[]{"Exit", "Change Slide Directory", "Cancel"};
     final int CANCEL = 2;
     final int DIRECTORY = 1;
-    int response = JOptionPane.showOptionDialog(this, "Would you like to Exit?", "Exit",
+    SwingUtilities.getWindowAncestor(this).dispose();
+    int response = JOptionPane.showOptionDialog(null, "Would you like to Exit?", "Exit",
         JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, answers, answers[0]);
-    SimpleLogger.variable("response", response);
     switch (response)
     {
       case CANCEL :
-        // do nothing
+        launch(false);
         break;
       case DIRECTORY :
-        SwingUtilities.getWindowAncestor(this).dispose();
         launch(true);
         break;
       default :
